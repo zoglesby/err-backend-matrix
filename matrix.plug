@@ -1,0 +1,6 @@
+[Core]
+Name = matrix
+Module = matrix
+
+[Documentation]
+Description=Backend implementation for Matrix.
