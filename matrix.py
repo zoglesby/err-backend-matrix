@@ -16,7 +16,7 @@ try:
     # Ugly hack for vendoring the Matrix Python SDK whilst I wait for the
     # Python 3 compatible version to be pushed to PyPI.
     current_dir = os.path.dirname(__file__)
-    matrix_dir = os.path.join(current_dir, '/matrix-python-sdk')
+    matrix_dir = os.path.join(current_dir, 'matrix-python-sdk')
     sys.path.insert(0, matrix_dir)
 
     from matrix_client.client import MatrixClient
