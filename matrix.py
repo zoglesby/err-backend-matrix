@@ -5,7 +5,6 @@
 import os
 import sys
 import time
-import inspect
 import logging
 
 from errbot.errBot import ErrBot
