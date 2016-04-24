@@ -19,7 +19,7 @@ try:
     matrix_dir = os.path.join(current_dir, '/matrix-python-sdk')
     sys.path.insert(0, matrix_dir)
 
-    from matrix_client import MatrixClient
+    from matrix_client.client import MatrixClient
     from matrix_client.api import MatrixRequestError
 except ImportError as _:
     log.exception("Could not start the Matrix backend.")
