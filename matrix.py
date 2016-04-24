@@ -13,12 +13,6 @@ from errbot.backends.base import Message, Person, Room, RoomOccupant
 log = logging.getLogger('errbot.backends.matrix')
 
 try:
-    # Ugly hack for vendoring the Matrix Python SDK whilst I wait for the
-    # Python 3 compatible version to be pushed to PyPI.
-    current_dir = os.path.dirname(__file__)
-    matrix_dir = os.path.join(current_dir, 'matrix-python-sdk')
-    sys.path.insert(0, matrix_dir)
-
     from matrix_client.client import MatrixClient
     from matrix_client.api import MatrixRequestError
 except ImportError as _:
