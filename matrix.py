@@ -131,3 +131,31 @@ class MatrixBackend(ErrBot):
 
     def connect_callback(self):
         super().connect_callback()
+
+    def build_identifier(self, txtrep):
+        raise Exception(
+            "You found a bug. I expected at least one of userid, channelid, username or channelname "
+            "to be resolved but none of them were. This shouldn't happen so, please file a bug."
+        )
+
+    def build_reply(self, mess, text=None, private=False):
+        raise Exception(
+            "You found a bug. I expected at least one of userid, channelid, username or channelname "
+            "to be resolved but none of them were. This shouldn't happen so, please file a bug."
+        )
+
+    def change_presence(self, status: str = '', message: str = ''):
+        raise Exception(
+            "You found a bug. I expected at least one of userid, channelid, username or channelname "
+            "to be resolved but none of them were. This shouldn't happen so, please file a bug."
+        )
+
+    @property
+    def mode(self):
+        return 'matrix'
+
+    def query_room(self, room):
+        raise Exception(
+            "You found a bug. I expected at least one of userid, channelid, username or channelname "
+            "to be resolved but none of them were. This shouldn't happen so, please file a bug."
+        )
