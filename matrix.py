@@ -113,14 +113,18 @@ class MatrixBackend(ErrBot):
                     """)
                     sys.exit(1)
 
+        self._client.add_listener(self._dispatch_event)
         try:
             while True:
-                time.sleep(2)
+                self._client.start_listener_thread()
         except KeyboardInterrupt:
             log.info("Interrupt received, shutting down...")
             return True
         finally:
             self.disconnect_callback()
+
+    def _dispatch_event(event):
+        log.info("Received event from Matrix")
 
     def rooms(self):
         rooms = []
