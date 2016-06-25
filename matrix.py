@@ -113,7 +113,7 @@ class MatrixBackend(ErrBot):
                     """)
                     sys.exit(1)
 
-        self._client.add_listener(self._dispatch_event)
+        self._client.add_listener(dispatch_matrix_event)
         try:
             while True:
                 self._client.start_listener_thread()
@@ -122,9 +122,6 @@ class MatrixBackend(ErrBot):
             return True
         finally:
             self.disconnect_callback()
-
-    def _dispatch_event(event):
-        log.info("Received event from Matrix")
 
     def rooms(self):
         rooms = []
@@ -168,3 +165,7 @@ class MatrixBackend(ErrBot):
             "You found a bug. I expected at least one of userid, channelid, username or channelname "
             "to be resolved but none of them were. This shouldn't happen so, please file a bug."
         )
+
+def _dispatch_matrix_event(event):
+    log.info("Received event from Matrix")
+
