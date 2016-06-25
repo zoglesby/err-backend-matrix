@@ -25,15 +25,19 @@ except ImportError as _:
 
 
 class MatrixPerson(Person):
-    def __init__(self, username=None, nick=None):
-        self._username = username
+    def __init__(self, mc, userid=None, nick=None):
+        self._username = None
         self._nick = nick
+        self._mc = mc
+
+    @property
+    def userid(self):
+        return self._userid
 
     @property
     def username(self):
         return self._username
 
-    # Generic API
     @property
     def client(self):
         # TODO: Check if this can be acquired.
@@ -76,10 +80,6 @@ class MatrixRoom(Room):
         log.debug("Joining room %s" % self._idd)
 
 
-def dispatch_matrix_event(event):
-    log.info("Received event from Matrix")
-
-
 class MatrixBackend(ErrBot):
     def __init__(self, config):
         super().__init__(config)
@@ -98,17 +98,38 @@ class MatrixBackend(ErrBot):
         self._username = config.BOT_IDENTITY['username']
         self._password = config.BOT_IDENTITY['password']
 
+
     def serve_once(self):
+        def dispatch_event(event):
+            log.info("Received event: %s" % event)
+
+            if event['type'] == "m.room.member":
+                if event['membership'] == "invite" and event['state_key'] == self._client.user_id:
+                    room_id = event['room_id']
+                    self._client.join_room(room_id)
+                    log.info("Auto-joined room: %s" % room_id)
+
+            if event['type'] == "m.room.message":
+                sender = event['sender']
+                log.info("Received message from %s" % sender)
+
+                msg = Message("help")
+                msg.frm = MatrixPerson(self._client, sender)
+                msg.to = MatrixPerson(self._client, self._client.user_id)
+                self.callback_message(msg) 
+
         self.connect_callback()
 
+        self._client = MatrixClient(self._homeserver)
+
+
         try:
-            self._client = MatrixClient(self._homeserver)
             self._token = self._client.register_with_password(self._username,
                                                               self._password,)
         except MatrixRequestError as e:
             if e.code == 400:
                 try:
-                    self._client.login_with_password(self._username,
+                    self._token = self._client.login_with_password(self._username,
                                                      self._password,)
                 except MatrixRequestError:
                     log.fatal("""
@@ -117,7 +138,11 @@ class MatrixBackend(ErrBot):
                     """)
                     sys.exit(1)
 
-        self._client.add_listener(dispatch_matrix_event)
+        self.bot_identifier = MatrixPerson(self._client)
+
+        user = self._client.get_user(self._client.user_id)
+        user.set_presence()
+        self._client.add_listener(dispatch_event)
 
         try:
             while True:
@@ -138,6 +163,7 @@ class MatrixBackend(ErrBot):
             log.debug('Found room %s (aka %s)' % (rid, rid.aliases[0]))
 
     def send_message(self, mess):
+        log.info("send_message called.")
         super().send_message(mess)
 
     def connect_callback(self):
