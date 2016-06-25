@@ -76,6 +76,10 @@ class MatrixRoom(Room):
         log.debug("Joining room %s" % self._idd)
 
 
+def dispatch_matrix_event(event):
+    log.info("Received event from Matrix")
+
+
 class MatrixBackend(ErrBot):
     def __init__(self, config):
         super().__init__(config)
@@ -165,7 +169,4 @@ class MatrixBackend(ErrBot):
             "You found a bug. I expected at least one of userid, channelid, username or channelname "
             "to be resolved but none of them were. This shouldn't happen so, please file a bug."
         )
-
-def _dispatch_matrix_event(event):
-    log.info("Received event from Matrix")
 
