@@ -9,6 +9,7 @@ import logging
 
 from errbot.errBot import ErrBot
 from errbot.backends.base import Message, Person, Room, RoomOccupant
+from errbot.backends.base import Identifier
 
 log = logging.getLogger('errbot.backends.matrix')
 
@@ -24,10 +25,30 @@ except ImportError as _:
     sys.exit(1)
 
 
+class MatrixIdentifier(Identifier):
+    def __init__(self, id):
+        self._id = id
+
+    @property
+    def id(self):
+        return self._id
+
+    def __unicode__(self):
+        return str(self._id)
+
+    def __eq__(self, other):
+        return self._id == other.id
+
+    __str__ = __unicode__
+
+    aclattr = id
+
 class MatrixPerson(Person):
-    def __init__(self, mc, userid=None, nick=None):
-        self._username = None
-        self._nick = nick
+    def __init__(self, mc, user_id=None, room_id=None):
+        self._userid = user_id
+        self._roomid = room_id
+        self._username = "PERSON_USERNAME"
+        self._nick = "PERSON_NICK"
         self._mc = mc
 
     @property
@@ -37,6 +58,11 @@ class MatrixPerson(Person):
     @property
     def username(self):
         return self._username
+
+    @property
+    def channelid(self):
+        log.info("channel id !!!")
+        self._roomid
 
     @property
     def client(self):
@@ -55,11 +81,24 @@ class MatrixPerson(Person):
         #       future.
         return self._nick
 
+    def __unicode__(self):
+        return "@%s" % self._username
+
+    def __str__(self):
+        return self.__unicode__()
+
     @property
     def person(self):
-        return self._username
+        return "%s" % self._userid
 
-    aclattr = username
+    # Override for ACLs
+    @property
+    def aclattr(self):
+        return "@%s" % self.username
+
+    # Compatibility with the generic API.
+    client = channelid
+    nick = username
 
 
 class MatrixRoomOccupant(MatrixPerson, RoomOccupant):
@@ -71,13 +110,23 @@ class MatrixRoomOccupant(MatrixPerson, RoomOccupant):
     def room(self):
         return self._room
 
+    def __unicode__(self):
+        return "Room Occupant"
 
-class MatrixRoom(Room):
-    def __init__(self, idd):
-        self._idd = idd
+
+class MatrixRoom(MatrixIdentifier, Room):
+    def __init__(self, id):
+        super().__init__(id)
+
+    @property
+    def id(self):
+        return self._id
 
     def join(self, username=None, password=None):
-        log.debug("Joining room %s" % self._idd)
+        log.debug("Joining room %s" % self.id)
+
+    def __unicode__(self):
+        return "Room"
 
 
 class MatrixBackend(ErrBot):
@@ -109,19 +158,27 @@ class MatrixBackend(ErrBot):
                     self._client.join_room(room_id)
                     log.info("Auto-joined room: %s" % room_id)
 
-            if event['type'] == "m.room.message":
+            if event['type'] == "m.room.message" and event['sender'] != self._client.user_id:
                 sender = event['sender']
-                log.info("Received message from %s" % sender)
+                room_id = event['room_id']
+                body = event['content']['body']
+                log.info("Received message from %s in room %s" % (sender, room_id))
 
-                msg = Message("help")
-                msg.frm = MatrixPerson(self._client, sender)
-                msg.to = MatrixPerson(self._client, self._client.user_id)
+                # msg = Message(body)
+                # msg.frm = MatrixPerson(self._client, sender, room_id)
+                # msg.to = MatrixPerson(self._client, self._client.user_id, room_id)
+                # self.callback_message(msg) 
+
+                msg = self.build_message(body)
+                room = MatrixRoom(room_id)
+                msg.frm = MatrixRoomOccupant(room, sender)
+                msg.to = room
                 self.callback_message(msg) 
 
+        self.reset_reconnection_count()
         self.connect_callback()
 
         self._client = MatrixClient(self._homeserver)
-
 
         try:
             self._token = self._client.register_with_password(self._username,
@@ -163,28 +220,35 @@ class MatrixBackend(ErrBot):
             log.debug('Found room %s (aka %s)' % (rid, rid.aliases[0]))
 
     def send_message(self, mess):
-        log.info("send_message called.")
+        log.info("send_message")
+
         super().send_message(mess)
+        room = self._client.join_room(mess.to.room.id)
+        room.send_text(mess.body)
 
     def connect_callback(self):
         super().connect_callback()
 
     def build_identifier(self, txtrep):
         raise Exception(
-            "You found a bug. I expected at least one of userid, channelid, username or channelname "
-            "to be resolved but none of them were. This shouldn't happen so, please file a bug."
+            "XXX"
         )
 
     def build_reply(self, mess, text=None, private=False):
-        raise Exception(
-            "You found a bug. I expected at least one of userid, channelid, username or channelname "
-            "to be resolved but none of them were. This shouldn't happen so, please file a bug."
-        )
+        log.info("build_reply")
+
+        print(private)
+        print(mess.frm)
+        print(mess.to)
+
+        response = self.build_message(text)
+        response.frm = self.bot_identifier
+        response.to = mess.frm
+        return response
 
     def change_presence(self, status: str = '', message: str = ''):
         raise Exception(
-            "You found a bug. I expected at least one of userid, channelid, username or channelname "
-            "to be resolved but none of them were. This shouldn't happen so, please file a bug."
+            "XXX"
         )
 
     @property
@@ -193,7 +257,6 @@ class MatrixBackend(ErrBot):
 
     def query_room(self, room):
         raise Exception(
-            "You found a bug. I expected at least one of userid, channelid, username or channelname "
-            "to be resolved but none of them were. This shouldn't happen so, please file a bug."
+            "XXX"
         )
 
