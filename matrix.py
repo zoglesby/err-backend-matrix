@@ -118,9 +118,10 @@ class MatrixBackend(ErrBot):
                     sys.exit(1)
 
         self._client.add_listener(dispatch_matrix_event)
+
         try:
             while True:
-                self._client.start_listener_thread()
+                self._client.listen_for_events()
         except KeyboardInterrupt:
             log.info("Interrupt received, shutting down...")
             return True
