@@ -101,12 +101,17 @@ class MatrixBackend(ErrBot):
             self._client = MatrixClient(self._homeserver)
             self._token = self._client.register_with_password(self._username,
                                                               self._password,)
-        except MatrixRequestError:
-            log.fatal("""
-            Incorrect username or password specified in
-            config.BOT_IDENTITY['username'] or config.BOT_IDENTITY['password'].
-            """)
-            sys.exit(1)
+        except MatrixRequestError as e:
+            if e.code == 400:
+                try:
+                    self._client.login_with_password(self._username,
+                                                     self._password,)
+                except MatrixRequestError:
+                    log.fatal("""
+                        Incorrect username or password specified in
+                        config.BOT_IDENTITY['username'] or config.BOT_IDENTITY['password'].
+                    """)
+                    sys.exit(1)
 
         try:
             while True:
