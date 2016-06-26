@@ -7,6 +7,8 @@ import sys
 import time
 import logging
 
+from markdown import Markdown
+
 from errbot.errBot import ErrBot
 from errbot.backends.base import Message, Person, Room, RoomOccupant
 from errbot.backends.base import Identifier
@@ -44,14 +46,12 @@ class MatrixIdentifier(Identifier):
 
     aclattr = id
 
+
 class MatrixPerson(Person):
-    def __init__(self, mc, user_id=None, room_id=None):
+    def __init__(self, api, user_id=None, room_id=None):
         self._userid = user_id
         self._roomid = room_id
-        self._username = "PERSON_USERNAME"
-        self._nick = "PERSON_NICK"
-        self._mc = mc
-        self._api = mc
+        self._api = api
 
     @property
     def userid(self):
@@ -63,8 +63,11 @@ class MatrixPerson(Person):
 
     @property
     def channelid(self):
-        log.info("channel id !!!")
         self._roomid
+
+    @property
+    def channelname(self):
+        return self._api.get_room_name(self._roomid)
 
     @property
     def client(self):
@@ -73,14 +76,10 @@ class MatrixPerson(Person):
 
     @property
     def fullname(self):
-        # TODO: Currently a user's full name/real name cannot be acquired, but
-        #       in future this might change.
-        return None
+        return self.username
 
     @property
     def nick(self):
-        # TODO: Handle weird Unicode nicknames (like @skaverat's), better in
-        #       future.
         return self._nick
 
     def __unicode__(self):
@@ -149,6 +148,7 @@ class MatrixBackend(ErrBot):
         self._username = config.BOT_IDENTITY['username']
         self._password = config.BOT_IDENTITY['password']
         self._api = None
+        self._token = None
 
 
     def serve_once(self):
@@ -198,12 +198,10 @@ class MatrixBackend(ErrBot):
                     """)
                     sys.exit(1)
 
-        self._api = MatrixHttpApi(self._homeserver)
+        self._api = MatrixHttpApi(self._homeserver, self._token)
 
         self.bot_identifier = MatrixPerson(self._api)
 
-        user = self._client.get_user(self._client.user_id)
-        # user.set_presence()
         self._client.add_listener(dispatch_event)
 
         try:
@@ -225,11 +223,13 @@ class MatrixBackend(ErrBot):
             log.debug('Found room %s (aka %s)' % (rid, rid.aliases[0]))
 
     def send_message(self, mess):
-        log.info("send_message")
-
         super().send_message(mess)
-        room = self._client.join_room(mess.to.room.id)
-        room.send_text(mess.body)
+        log.debug("send_message")
+
+        room_id = mess.to.room.id
+        # text_content = Markdown().convert(mess.body)
+        text_content = mess.body
+        self._api.send_message(room_id, text_content)
 
     def connect_callback(self):
         super().connect_callback()
