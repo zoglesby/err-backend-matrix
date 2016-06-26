@@ -16,6 +16,7 @@ log = logging.getLogger('errbot.backends.matrix')
 try:
     from matrix_client.client import MatrixClient
     from matrix_client.api import MatrixRequestError
+    from matrix_client.api import MatrixHttpApi
 except ImportError as _:
     log.exception("Could not start the Matrix backend.")
     log.fatal("""
@@ -50,6 +51,7 @@ class MatrixPerson(Person):
         self._username = "PERSON_USERNAME"
         self._nick = "PERSON_NICK"
         self._mc = mc
+        self._api = mc
 
     @property
     def userid(self):
@@ -57,7 +59,7 @@ class MatrixPerson(Person):
 
     @property
     def username(self):
-        return self._username
+        return self._api.get_display_name(self._userid)
 
     @property
     def channelid(self):
@@ -102,9 +104,9 @@ class MatrixPerson(Person):
 
 
 class MatrixRoomOccupant(MatrixPerson, RoomOccupant):
-    def __init__(self, room, username=None, nick=None):
+    def __init__(self, api, room, user_id=None, nick=None):
+        super().__init__(api, user_id, nick)
         self._room = room
-        super().__init__(username, nick)
 
     @property
     def room(self):
@@ -146,6 +148,7 @@ class MatrixBackend(ErrBot):
         self._homeserver = config.MATRIX_HOMESERVER
         self._username = config.BOT_IDENTITY['username']
         self._password = config.BOT_IDENTITY['password']
+        self._api = None
 
 
     def serve_once(self):
@@ -171,7 +174,7 @@ class MatrixBackend(ErrBot):
 
                 msg = self.build_message(body)
                 room = MatrixRoom(room_id)
-                msg.frm = MatrixRoomOccupant(room, sender)
+                msg.frm = MatrixRoomOccupant(self._api, room, sender)
                 msg.to = room
                 self.callback_message(msg) 
 
@@ -195,10 +198,12 @@ class MatrixBackend(ErrBot):
                     """)
                     sys.exit(1)
 
-        self.bot_identifier = MatrixPerson(self._client)
+        self._api = MatrixHttpApi(self._homeserver)
+
+        self.bot_identifier = MatrixPerson(self._api)
 
         user = self._client.get_user(self._client.user_id)
-        user.set_presence()
+        # user.set_presence()
         self._client.add_listener(dispatch_event)
 
         try:
@@ -236,10 +241,6 @@ class MatrixBackend(ErrBot):
 
     def build_reply(self, mess, text=None, private=False):
         log.info("build_reply")
-
-        print(private)
-        print(mess.frm)
-        print(mess.to)
 
         response = self.build_message(text)
         response.frm = self.bot_identifier
