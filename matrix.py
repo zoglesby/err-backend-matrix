@@ -224,11 +224,16 @@ class MatrixBackend(ErrBot):
 
     def send_message(self, mess):
         super().send_message(mess)
-        log.debug("send_message")
 
         room_id = mess.to.room.id
+        text_content = item_url = mess.body
+
+        if item_url.startswith("http://") or item_url.startswith("https://"):
+            if item_url.endswith("gif"):
+                self._api.send_content(room_id, item_url, "image", "m.image")
+                return
+
         # text_content = Markdown().convert(mess.body)
-        text_content = mess.body
         self._api.send_message(room_id, text_content)
 
     def connect_callback(self):
