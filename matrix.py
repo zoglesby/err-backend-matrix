@@ -95,7 +95,7 @@ class MatrixPerson(Person):
     # Override for ACLs
     @property
     def aclattr(self):
-        return "@%s" % self.username
+        return self.userid
 
     # Compatibility with the generic API.
     client = channelid
