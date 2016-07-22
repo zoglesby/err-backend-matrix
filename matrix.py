@@ -187,7 +187,7 @@ class MatrixBackend(ErrBot):
             self._token = self._client.register_with_password(self._username,
                                                               self._password,)
         except MatrixRequestError as e:
-            if e.code == 400:
+            if e.code == 400 or e.code == 403:
                 try:
                     self._token = self._client.login_with_password(self._username,
                                                      self._password,)
